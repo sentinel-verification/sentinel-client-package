@@ -1,0 +1,61 @@
+# ============================================================
+# Sentinel Gateway — Traefik Dynamic Configuration
+# Middleware definitions for access control and rate limiting
+# ============================================================
+
+http:
+
+  # ----------------------------------------------------------
+  # Middlewares
+  # ----------------------------------------------------------
+  middlewares:
+
+    # ForwardAuth: delegates every request to the auth service
+    # for classification and access-control decisions.
+    # If sentinel-auth returns 200, the request proceeds upstream.
+    # If sentinel-auth returns 402 or 403, Traefik forwards that
+    # response directly to the client.
+    sentinel-forwardauth:
+      forwardAuth:
+        address: "http://sentinel-auth:4000/auth"
+        # Pass these headers from the original request to the auth service
+        authResponseHeaders:
+          - "X-Sentinel-Session"
+          - "X-Sentinel-Status"
+          - "X-Sentinel-Token"
+        # Trust headers from the auth service response
+        trustForwardHeader: true
+
+    # Rate Limiting: protects against volumetric abuse.
+    # Applies per source-IP token bucket rate limiting.
+    # average = sustained requests/period, burst = spike allowance.
+    sentinel-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1m
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+            excludedIPs:
+              - "127.0.0.1/32"
+
+    # Connection limiting: caps concurrent connections per IP.
+    # Prevents slowloris and connection exhaustion attacks.
+    sentinel-connlimit:
+      inFlightReq:
+        amount: 50
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Security headers: hardens responses against common attacks.
+    sentinel-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Powered-By: "Sentinel Gateway"
+          Server: "Sentinel"

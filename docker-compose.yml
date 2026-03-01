@@ -1,0 +1,50 @@
+# ============================================================
+# Sentinel Gateway — Enterprise Edge Protection
+# Installs locally on your servers to block AI scraping bots.
+# ============================================================
+services:
+  sentinel-edge:
+    image: traefik:v3.3
+    container_name: sentinel-edge
+    restart: unless-stopped
+    ports:
+      - "80:8080" # Binds to their public web port
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+    networks:
+      - sentinel-net
+
+  sentinel-auth:
+    image: sentinelverification/sentinel-auth:latest
+    container_name: sentinel-auth
+    restart: unless-stopped
+    env_file: .env # Reads the client's wallet details
+    networks:
+      - sentinel-net
+    depends_on:
+      - sentinel-state
+
+  sentinel-state:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: sentinel-state
+    restart: unless-stopped
+    command:
+      - "--requirepass=${SENTINEL_CACHE_PASSWORD}"
+      - "--maxmemory=256mb"
+    networks:
+      - sentinel-net
+
+  sentinel-verifier:
+    image: sentinelverification/sentinel-verifier:latest
+    container_name: sentinel-verifier
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - sentinel-net
+    depends_on:
+      - sentinel-state
+
+networks:
+  sentinel-net:
+    driver: bridge
