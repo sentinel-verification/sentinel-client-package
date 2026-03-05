@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sentinel Referral Registry Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    #status { margin-bottom: 1em; color: green; }
+    button { margin: 0.5em 0; }
+    pre { background: #f4f4f4; padding: 1em; }
+  </style>
+</head>
+<body>
+  <h2>Sentinel Referral Registry Test</h2>
+  <div id="status">Not connected</div>
+  <button id="connectBtn">Connect Wallet</button>
+  <div id="wallet"></div>
+  <hr>
+  <button id="readBtn">Read Company Address</button>
+  <pre id="result"></pre>
+  <script>
+    // --- CONFIG ---
+    const CONTRACT_ADDRESS = '0x47A71e6EFf89Bd21413d97E38357A71239BcAF2D';
+    // Paste the ABI array below (from contracts/SentinelEconomyReferralRegistry.json)
+    const ABI =[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_company",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "AccessControlBadConfirmation",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "neededRole",
+				"type": "bytes32"
+			}
+		],
+		"name": "AccessControlUnauthorizedAccount",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "business",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes",
+				"name": "signature",
+				"type": "bytes"
+			}
+		],
+		"name": "claimReferral",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "referrer",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes",
+				"name": "signature",
+				"type": "bytes"
+			}
+		],
+		"name": "createReferral",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "ECDSAInvalidSignature",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "length",
+				"type": "uint256"
+			}
+		],
+		"name": "ECDSAInvalidSignatureLength",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "s",
+				"type": "bytes32"
+			}
+		],
+		"name": "ECDSAInvalidSignatureS",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "grantEmergencyRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "grantRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "InvalidShortString",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "str",
+				"type": "string"
+			}
+		],
+		"name": "StringTooLong",
+		"type": "error"
+	},
+	{
+		"anonymous": false,
+		"inputs": [],
+		"name": "EIP712DomainChanged",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "business",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint64",
+				"name": "claimedAt",
+				"type": "uint64"
+			}
+		],
+		"name": "ReferralClaimed",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "company",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "referrer",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint64",
+				"name": "createdAt",
+				"type": "uint64"
+			}
+		],
+		"name": "ReferralCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "company",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint64",
+				"name": "revokedAt",
+				"type": "uint64"
+			}
+		],
+		"name": "ReferralRevoked",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "callerConfirmation",
+				"type": "address"
+			}
+		],
+		"name": "renounceRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "revokeEmergencyRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			}
+		],
+		"name": "revokeReferral",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "revokeRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "previousAdminRole",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "newAdminRole",
+				"type": "bytes32"
+			}
+		],
+		"name": "RoleAdminChanged",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "RoleGranted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "RoleRevoked",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "company",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "DEFAULT_ADMIN_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "eip712Domain",
+		"outputs": [
+			{
+				"internalType": "bytes1",
+				"name": "fields",
+				"type": "bytes1"
+			},
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "version",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "chainId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "verifyingContract",
+				"type": "address"
+			},
+			{
+				"internalType": "bytes32",
+				"name": "salt",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "extensions",
+				"type": "uint256[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "EMERGENCY_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			}
+		],
+		"name": "getReferral",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "company",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "referrer",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "business",
+						"type": "address"
+					},
+					{
+						"internalType": "uint64",
+						"name": "createdAt",
+						"type": "uint64"
+					},
+					{
+						"internalType": "uint64",
+						"name": "claimedAt",
+						"type": "uint64"
+					},
+					{
+						"internalType": "enum SentinelEconomyReferralRegistry.Status",
+						"name": "status",
+						"type": "uint8"
+					}
+				],
+				"internalType": "struct SentinelEconomyReferralRegistry.Referral",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			}
+		],
+		"name": "getRoleAdmin",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			}
+		],
+		"name": "getStatus",
+		"outputs": [
+			{
+				"internalType": "enum SentinelEconomyReferralRegistry.Status",
+				"name": "status",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "role",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "account",
+				"type": "address"
+			}
+		],
+		"name": "hasRole",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "referrals",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "company",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "referrer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "business",
+				"type": "address"
+			},
+			{
+				"internalType": "uint64",
+				"name": "createdAt",
+				"type": "uint64"
+			},
+			{
+				"internalType": "uint64",
+				"name": "claimedAt",
+				"type": "uint64"
+			},
+			{
+				"internalType": "enum SentinelEconomyReferralRegistry.Status",
+				"name": "status",
+				"type": "uint8"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes4",
+				"name": "interfaceId",
+				"type": "bytes4"
+			}
+		],
+		"name": "supportsInterface",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "referralId",
+				"type": "bytes32"
+			},
+			{
+				"internalType": "address",
+				"name": "referrer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "business",
+				"type": "address"
+			}
+		],
+		"name": "verifyReferral",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "valid",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+] 
+      
+    // --- END CONFIG ---
+
+    let provider, signer, contract;
+    const status = document.getElementById('status');
+    const walletDiv = document.getElementById('wallet');
+    const connectBtn = document.getElementById('connectBtn');
+    const readBtn = document.getElementById('readBtn');
+    const result = document.getElementById('result');
+
+    connectBtn.onclick = async () => {
+      if (!window.ethereum) {
+        status.textContent = 'MetaMask not detected!';
+        status.style.color = 'red';
+        return;
+      }
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send('eth_requestAccounts', []);
+      signer = provider.getSigner();
+      const address = await signer.getAddress();
+      walletDiv.textContent = 'Connected wallet: ' + address;
+      status.textContent = 'Connected!';
+      status.style.color = 'green';
+      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    };
+
+    readBtn.onclick = async () => {
+      if (!contract) {
+        result.textContent = 'Connect wallet first!';
+        return;
+      }
+      try {
+        // Example: read the company address (public variable)
+        const company = await contract.company();
+        result.textContent = 'Company address: ' + company;
+      } catch (e) {
+        result.textContent = 'Error: ' + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
