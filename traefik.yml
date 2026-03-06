@@ -42,9 +42,9 @@ entryPoints:
     address: ":8080"
     transport:
       respondingTimeouts:
-        readTimeout: 30s
-        writeTimeout: 30s
-        idleTimeout: 120s
+        readTimeout: 10s      # Lowered for Slowloris defense
+        writeTimeout: 10s
+        idleTimeout: 15s      # Lowered for idle connection exhaustion
       lifeCycle:
         requestAcceptGraceTimeout: 5s
         graceTimeOut: 10s
@@ -56,6 +56,10 @@ entryPoints:
         - "10.0.0.0/8"
         - "172.16.0.0/12"
         - "192.168.0.0/16"
+
+  # Secure web entrypoint
+  websecure:
+    address: ":8443"
 
   # Dashboard entrypoint (internal only)
   dashboard:
