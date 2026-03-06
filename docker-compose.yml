@@ -10,6 +10,7 @@ services:
     ports:
       - "80:8080" # Binds to their public web port
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
       - ./dynamic:/etc/traefik/dynamic:ro
     networks:
@@ -31,7 +32,8 @@ services:
     restart: unless-stopped
     command:
       - "--requirepass=${SENTINEL_CACHE_PASSWORD}"
-      - "--maxmemory=256mb"
+      - "--maxmemory=512mb"
+      - "--proactor_threads=2"
     networks:
       - sentinel-net
 
