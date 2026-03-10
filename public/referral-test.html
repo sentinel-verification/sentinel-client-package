@@ -1,732 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Sentinel Referral Registry Test</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    #status { margin-bottom: 1em; color: green; }
-    button { margin: 0.5em 0; }
-    pre { background: #f4f4f4; padding: 1em; }
-  </style>
+<meta charset="UTF-8">
+<title>Sentinel Referral Registry v2 Test</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+body { font-family: Arial, sans-serif; margin: 2em; background: #1a1a2e; color: #e0e0e0; }
+h2 { color: #00d4ff; }
+#status { margin-bottom: 1em; color: #00ff88; }
+button { margin: 0.5em 0.5em 0.5em 0; padding: 0.5em 1em; background: #0052FF; color: white; border: none; border-radius: 4px; cursor: pointer; }
+button:hover { background: #003ecb; }
+input { padding: 0.5em; width: 500px; font-family: monospace; background: #2a2a4a; color: #e0e0e0; border: 1px solid #444; border-radius: 4px; }
+pre { background: #2a2a4a; padding: 1em; border-radius: 4px; overflow-x: auto; }
+label { display: block; margin-top: 1em; color: #aaa; }
+.section { margin: 1.5em 0; padding: 1em; border: 1px solid #333; border-radius: 8px; }
+</style>
 </head>
 <body>
-  <h2>Sentinel Referral Registry Test</h2>
-  <div id="status">Not connected</div>
-  <button id="connectBtn">Connect Wallet</button>
-  <div id="wallet"></div>
-  <hr>
-  <button id="readBtn">Read Company Address</button>
-  <pre id="result"></pre>
-  <script>
-    // --- CONFIG ---
-    const CONTRACT_ADDRESS = '0xfDf6f1e617E4e0f4171f2c441BCE11707D3A7F84';
-    // Paste the ABI array below (from contracts/SentinelEconomyReferralRegistry.json)
-    const ABI =[
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_company",
-				"type": "address"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"inputs": [],
-		"name": "AccessControlBadConfirmation",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes32",
-				"name": "neededRole",
-				"type": "bytes32"
-			}
-		],
-		"name": "AccessControlUnauthorizedAccount",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "business",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes",
-				"name": "signature",
-				"type": "bytes"
-			}
-		],
-		"name": "claimReferral",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes",
-				"name": "signature",
-				"type": "bytes"
-			}
-		],
-		"name": "createReferral",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "ECDSAInvalidSignature",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "length",
-				"type": "uint256"
-			}
-		],
-		"name": "ECDSAInvalidSignatureLength",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "s",
-				"type": "bytes32"
-			}
-		],
-		"name": "ECDSAInvalidSignatureS",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "grantEmergencyRole",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "grantRole",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "InvalidShortString",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "str",
-				"type": "string"
-			}
-		],
-		"name": "StringTooLong",
-		"type": "error"
-	},
-	{
-		"anonymous": false,
-		"inputs": [],
-		"name": "EIP712DomainChanged",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "business",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint64",
-				"name": "claimedAt",
-				"type": "uint64"
-			}
-		],
-		"name": "ReferralClaimed",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "company",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint64",
-				"name": "createdAt",
-				"type": "uint64"
-			}
-		],
-		"name": "ReferralCreated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "company",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint64",
-				"name": "revokedAt",
-				"type": "uint64"
-			}
-		],
-		"name": "ReferralRevoked",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "callerConfirmation",
-				"type": "address"
-			}
-		],
-		"name": "renounceRole",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "revokeEmergencyRole",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			}
-		],
-		"name": "revokeReferral",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "revokeRole",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "previousAdminRole",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "newAdminRole",
-				"type": "bytes32"
-			}
-		],
-		"name": "RoleAdminChanged",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "sender",
-				"type": "address"
-			}
-		],
-		"name": "RoleGranted",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "sender",
-				"type": "address"
-			}
-		],
-		"name": "RoleRevoked",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "company",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "DEFAULT_ADMIN_ROLE",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "eip712Domain",
-		"outputs": [
-			{
-				"internalType": "bytes1",
-				"name": "fields",
-				"type": "bytes1"
-			},
-			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "version",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "chainId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "verifyingContract",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes32",
-				"name": "salt",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "extensions",
-				"type": "uint256[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "EMERGENCY_ROLE",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			}
-		],
-		"name": "getReferral",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "company",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
-						"name": "referrer",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
-						"name": "business",
-						"type": "address"
-					},
-					{
-						"internalType": "uint64",
-						"name": "createdAt",
-						"type": "uint64"
-					},
-					{
-						"internalType": "uint64",
-						"name": "claimedAt",
-						"type": "uint64"
-					},
-					{
-						"internalType": "enum SentinelEconomyReferralRegistry.Status",
-						"name": "status",
-						"type": "uint8"
-					}
-				],
-				"internalType": "struct SentinelEconomyReferralRegistry.Referral",
-				"name": "",
-				"type": "tuple"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			}
-		],
-		"name": "getRoleAdmin",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			}
-		],
-		"name": "getStatus",
-		"outputs": [
-			{
-				"internalType": "enum SentinelEconomyReferralRegistry.Status",
-				"name": "status",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "role",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "account",
-				"type": "address"
-			}
-		],
-		"name": "hasRole",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"name": "referrals",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "company",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "business",
-				"type": "address"
-			},
-			{
-				"internalType": "uint64",
-				"name": "createdAt",
-				"type": "uint64"
-			},
-			{
-				"internalType": "uint64",
-				"name": "claimedAt",
-				"type": "uint64"
-			},
-			{
-				"internalType": "enum SentinelEconomyReferralRegistry.Status",
-				"name": "status",
-				"type": "uint8"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes4",
-				"name": "interfaceId",
-				"type": "bytes4"
-			}
-		],
-		"name": "supportsInterface",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "referralId",
-				"type": "bytes32"
-			},
-			{
-				"internalType": "address",
-				"name": "referrer",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "business",
-				"type": "address"
-			}
-		],
-		"name": "verifyReferral",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "valid",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
-] 
-      
-    // --- END CONFIG ---
+<h2>Sentinel Referral Registry v2 Test</h2>
+<p style="color:#888;">Contract: <code>0x3591f64D970B360231b62d035b1ff4a9C69897e0</code> (Base Mainnet)</p>
+<div id="status">Not connected</div>
+<button id="connectBtn">Connect Wallet</button>
+<div id="wallet"></div>
 
-    let provider, signer, contract;
-    const status = document.getElementById('status');
-    const walletDiv = document.getElementById('wallet');
-    const connectBtn = document.getElementById('connectBtn');
-    const readBtn = document.getElementById('readBtn');
-    const result = document.getElementById('result');
+<div class="section">
+<h3>Look Up Referral</h3>
+<label>Referral ID (bytes32 hash):</label>
+<input id="refId" placeholder="0x..." />
+<br>
+<button id="readBtn">Get Referral</button>
+<pre id="result">Enter a referral ID and click "Get Referral"</pre>
+</div>
 
-    connectBtn.onclick = async () => {
-      if (!window.ethereum) {
-        status.textContent = 'MetaMask not detected!';
-        status.style.color = 'red';
-        return;
-      }
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      signer = provider.getSigner();
-      const address = await signer.getAddress();
-      walletDiv.textContent = 'Connected wallet: ' + address;
-      status.textContent = 'Connected!';
-      status.style.color = 'green';
-      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-    };
+<div class="section">
+<h3>Quick Status Check</h3>
+<button id="statusBtn">Check Status</button>
+<pre id="statusResult">Enter a referral ID above first</pre>
+</div>
 
-    readBtn.onclick = async () => {
-      if (!contract) {
-        result.textContent = 'Connect wallet first!';
-        return;
-      }
-      try {
-        // Example: read the company address (public variable)
-        const company = await contract.company();
-        result.textContent = 'Company address: ' + company;
-      } catch (e) {
-        result.textContent = 'Error: ' + e.message;
-      }
-    };
-  </script>
+<script>
+const CONTRACT_ADDRESS = '0x3591f64D970B360231b62d035b1ff4a9C69897e0';
+const ABI = [{"inputs": [], "name": "ReferralAlreadyClaimed", "type": "error"}, {"inputs": [], "name": "ReferralAlreadyExists", "type": "error"}, {"inputs": [], "name": "ReferralNotFound", "type": "error"}, {"anonymous": false, "inputs": [{"indexed": true, "internalType": "bytes32", "name": "referralId", "type": "bytes32"}, {"indexed": true, "internalType": "address", "name": "business", "type": "address"}], "name": "ReferralClaimed", "type": "event"}, {"anonymous": false, "inputs": [{"indexed": true, "internalType": "bytes32", "name": "referralId", "type": "bytes32"}, {"indexed": true, "internalType": "address", "name": "referrer", "type": "address"}], "name": "ReferralCreated", "type": "event"}, {"inputs": [{"internalType": "bytes32", "name": "referralId", "type": "bytes32"}, {"internalType": "address", "name": "business", "type": "address"}, {"internalType": "bytes", "name": "", "type": "bytes"}], "name": "claimReferral", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes32", "name": "referralId", "type": "bytes32"}, {"internalType": "address", "name": "referrer", "type": "address"}, {"internalType": "bytes", "name": "", "type": "bytes"}], "name": "createReferral", "outputs": [], "stateMutability": "nonpayable", "type": "function"}, {"inputs": [{"internalType": "bytes32", "name": "referralId", "type": "bytes32"}], "name": "getReferral", "outputs": [{"components": [{"internalType": "address", "name": "company", "type": "address"}, {"internalType": "address", "name": "referrer", "type": "address"}, {"internalType": "address", "name": "business", "type": "address"}, {"internalType": "uint64", "name": "createdAt", "type": "uint64"}, {"internalType": "uint64", "name": "claimedAt", "type": "uint64"}, {"internalType": "uint8", "name": "status", "type": "uint8"}], "internalType": "struct SentinelEconomyReferralRegistry.Referral", "name": "", "type": "tuple"}], "stateMutability": "view", "type": "function"}, {"inputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}], "name": "referrals", "outputs": [{"internalType": "address", "name": "company", "type": "address"}, {"internalType": "address", "name": "referrer", "type": "address"}, {"internalType": "address", "name": "business", "type": "address"}, {"internalType": "uint64", "name": "createdAt", "type": "uint64"}, {"internalType": "uint64", "name": "claimedAt", "type": "uint64"}, {"internalType": "uint8", "name": "status", "type": "uint8"}], "stateMutability": "view", "type": "function"}];
+
+let provider, signer, contract;
+const statusEl = document.getElementById('status');
+const walletDiv = document.getElementById('wallet');
+
+document.getElementById('connectBtn').onclick = async () => {
+  if (!window.ethereum) {
+    statusEl.textContent = 'MetaMask not detected!';
+    statusEl.style.color = 'red';
+    return;
+  }
+  provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send('eth_requestAccounts', []);
+  signer = provider.getSigner();
+  const address = await signer.getAddress();
+  const network = await provider.getNetwork();
+  walletDiv.textContent = 'Connected: ' + address + ' (Chain: ' + network.chainId + ')';
+  statusEl.textContent = network.chainId === 8453 ? 'Connected to Base Mainnet' : 'Wrong network! Switch to Base (8453)';
+  statusEl.style.color = network.chainId === 8453 ? '#00ff88' : 'orange';
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+};
+
+document.getElementById('readBtn').onclick = async () => {
+  const resultEl = document.getElementById('result');
+  if (!contract) { resultEl.textContent = 'Connect wallet first!'; return; }
+  const refId = document.getElementById('refId').value.trim();
+  if (!refId) { resultEl.textContent = 'Enter a referral ID!'; return; }
+  try {
+    const ref = await contract.getReferral(refId);
+    const statusMap = ['Active (Unclaimed)', 'Claimed', 'Revoked'];
+    resultEl.textContent = JSON.stringify({
+      referrer: ref.referrer,
+      business: ref.business,
+      createdAt: new Date(Number(ref.createdAt) * 1000).toISOString(),
+      claimedAt: Number(ref.claimedAt) > 0 ? new Date(Number(ref.claimedAt) * 1000).toISOString() : 'Not claimed',
+      status: statusMap[ref.status] || 'Unknown (' + ref.status + ')'
+    }, null, 2);
+  } catch (e) {
+    resultEl.textContent = 'Error: ' + e.message;
+  }
+};
+
+document.getElementById('statusBtn').onclick = async () => {
+  const resultEl = document.getElementById('statusResult');
+  if (!contract) { resultEl.textContent = 'Connect wallet first!'; return; }
+  const refId = document.getElementById('refId').value.trim();
+  if (!refId) { resultEl.textContent = 'Enter a referral ID above first!'; return; }
+  try {
+    const ref = await contract.getReferral(refId);
+    const created = Number(ref.createdAt);
+    if (created === 0) {
+      resultEl.textContent = 'Referral NOT FOUND on-chain';
+    } else if (ref.status === 0) {
+      resultEl.textContent = 'Referral EXISTS and is UNCLAIMED - ready for a business to claim';
+    } else {
+      resultEl.textContent = 'Referral CLAIMED by: ' + ref.business;
+    }
+  } catch (e) {
+    resultEl.textContent = 'Error: ' + e.message;
+  }
+};
+</script>
 </body>
 </html>

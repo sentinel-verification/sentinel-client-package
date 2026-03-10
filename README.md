@@ -62,7 +62,7 @@ Edit `.env` and fill in:
 | Variable | What To Enter |
 |----------|---------------|
 | `SENTINEL_BUSINESS_WALLET` | Your Base wallet address (receives 70%) |
-| `SENTINEL_HUNTER_WALLET` | Referrer's wallet (provided by your referrer) |
+| `SENTINEL_REFERRAL_ID` | On-Chain referral hash (provided by your referrer) |
 | `SENTINEL_CACHE_PASSWORD` | Any strong random password |
 | `SENTINEL_HMAC_SECRET` | Any strong random secret (`openssl rand -hex 64`) |
 
