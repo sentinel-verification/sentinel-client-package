@@ -7,12 +7,22 @@ services:
     image: traefik:v3.6
     container_name: sentinel-edge
     restart: unless-stopped
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+      # --- Let's Encrypt ACME resolver (env vars interpolated by Compose) ---
+      - "--certificatesresolvers.letsencrypt.acme.email=${SENTINEL_ACME_EMAIL:-noreply@example.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     ports:
-      - "80:8080" # Binds to their public web port
+      - "80:8080"    # HTTP  - always active
+      - "443:8443"   # HTTPS - active when SENTINEL_DOMAIN is set
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
       - ./dynamic:/etc/traefik/dynamic:ro
+      - ./acme:/etc/traefik/acme          # Persistent Let's Encrypt certs
+    environment:
+      - SENTINEL_DOMAIN=${SENTINEL_DOMAIN:-}
     networks:
       - sentinel-net
 
@@ -58,8 +68,35 @@ services:
       - sentinel-net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.target.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.target.middlewares=sentinel-forwardauth@file"
+
+      # -------------------------------------------------------
+      # Router 1: HTTP catch-all (always active, IP + hostname)
+      # -------------------------------------------------------
+      - "traefik.http.routers.target-http.entrypoints=web"
+      - "traefik.http.routers.target-http.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.target-http.priority=1"
+      - "traefik.http.routers.target-http.middlewares=sentinel-forwardauth@file"
+
+      # -------------------------------------------------------
+      # Router 2: HTTPS domain route (active when SENTINEL_DOMAIN is set)
+      # When SENTINEL_DOMAIN is empty, Host(``) never matches = no-op.
+      # -------------------------------------------------------
+      - "traefik.http.routers.target-https.entrypoints=websecure"
+      - "traefik.http.routers.target-https.rule=Host(`${SENTINEL_DOMAIN}`)"
+      - "traefik.http.routers.target-https.tls=true"
+      - "traefik.http.routers.target-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.target-https.middlewares=sentinel-forwardauth@file"
+
+      # -------------------------------------------------------
+      # Router 3: HTTP→HTTPS redirect for the domain
+      # Catches domain requests on port 80 and redirects to 443.
+      # When SENTINEL_DOMAIN is empty, Host(``) never matches = no-op.
+      # Priority > 1 so it beats the catch-all for domain traffic.
+      # -------------------------------------------------------
+      - "traefik.http.routers.target-redirect.entrypoints=web"
+      - "traefik.http.routers.target-redirect.rule=Host(`${SENTINEL_DOMAIN}`)"
+      - "traefik.http.routers.target-redirect.priority=100"
+      - "traefik.http.routers.target-redirect.middlewares=redirect-to-https@file"
 
 networks:
   sentinel-net:

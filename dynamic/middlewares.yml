@@ -68,6 +68,14 @@ http:
         memRequestBodyBytes: 1048576   # 1MB (optional, for in-memory buffering)
         maxResponseBodyBytes: 2097152  # 2MB (optional)
 
+    # HTTP → HTTPS redirect: used by the target-redirect router
+    # when SENTINEL_DOMAIN is configured. Performs a 301 permanent
+    # redirect from http:// to https:// preserving path and query.
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
 # ----------------------------------------------------------
 # TLS Configuration
 # ----------------------------------------------------------

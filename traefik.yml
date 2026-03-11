@@ -1,6 +1,10 @@
 # ============================================================
 # Sentinel Gateway — Traefik Static Configuration
 # Edge proxy for API rate-limiting and access-control
+#
+# NOTE: Let's Encrypt certificatesResolvers config is passed
+# via CLI args in docker-compose.yml to support env var
+# interpolation for SENTINEL_ACME_EMAIL.
 # ============================================================
 
 # ----------------------------------------------------------
@@ -60,6 +64,13 @@ entryPoints:
   # Secure web entrypoint
   websecure:
     address: ":8443"
+    forwardedHeaders:
+      insecure: false
+      trustedIPs:
+        - "127.0.0.1/32"
+        - "10.0.0.0/8"
+        - "172.16.0.0/12"
+        - "192.168.0.0/16"
 
   # Dashboard entrypoint (internal only)
   dashboard:
