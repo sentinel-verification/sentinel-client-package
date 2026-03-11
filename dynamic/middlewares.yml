@@ -25,6 +25,7 @@ http:
           - "X-Sentinel-Token"
         # Trust headers from the auth service response
         trustForwardHeader: true
+        maxResponseBodySize: 1048576
 
     # Rate Limiting: protects against volumetric abuse.
     # Applies per source-IP token bucket rate limiting.
