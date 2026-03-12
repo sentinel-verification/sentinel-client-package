@@ -2,9 +2,9 @@
 # Sentinel Gateway — Traefik Static Configuration
 # Edge proxy for API rate-limiting and access-control
 #
-# NOTE: Let's Encrypt certificatesResolvers config is passed
-# via CLI args in docker-compose.yml to support env var
-# interpolation for SENTINEL_ACME_EMAIL.
+# NOTE: Let's Encrypt certificatesResolvers is configured below
+# in this static config file. The ACME email placeholder is
+# replaced at boot by the startup script from SENTINEL_ACME_EMAIL.
 # ============================================================
 
 # ----------------------------------------------------------
@@ -124,3 +124,16 @@ metrics:
 # ----------------------------------------------------------
 ping:
   entryPoint: dashboard
+
+# ----------------------------------------------------------
+# Let's Encrypt — Certificate Resolver
+# Automatically provisions TLS certs when SENTINEL_DOMAIN is
+# set. The email below is replaced at boot by startup.sh.
+# ----------------------------------------------------------
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "SENTINEL_ACME_EMAIL_PLACEHOLDER"
+      storage: "/etc/traefik/acme/acme.json"
+      httpChallenge:
+        entryPoint: web

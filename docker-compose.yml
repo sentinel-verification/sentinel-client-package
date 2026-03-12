@@ -9,10 +9,6 @@ services:
     restart: unless-stopped
     command:
       - "--configFile=/etc/traefik/traefik.yml"
-      # --- Let's Encrypt ACME resolver (env vars interpolated by Compose) ---
-      - "--certificatesresolvers.letsencrypt.acme.email=${SENTINEL_ACME_EMAIL:-noreply@example.com}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     ports:
       - "80:8080"    # HTTP  - always active
       - "443:8443"   # HTTPS - active when SENTINEL_DOMAIN is set
