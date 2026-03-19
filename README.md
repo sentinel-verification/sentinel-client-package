@@ -2,7 +2,7 @@
 
 **Protect your website from unauthorized AI scraping. Get paid $0.02 USDC per request. Automatically.**
 
-[![Base Mainnet](https://img.shields.io/badge/Base-Mainnet-0052FF?logo=coinbase)](https://basescan.org/address/0xfDf6f1e617E4e0f4171f2c441BCE11707D3A7F84)
+[![Base Mainnet](https://img.shields.io/badge/Base-Mainnet-0052FF?logo=coinbase)](https://basescan.org/address/0xC8F8218Cc8F858BAdf3bc1a45b5d85E50666DbdF)
 [![USDC](https://img.shields.io/badge/USDC-$0.02/req-2775CA?logo=circle)](https://www.circle.com/en/usdc)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://hub.docker.com/u/sentinelverification)
 
@@ -26,11 +26,10 @@ Human visitors pass through unaffected. Zero friction for real users.
 
 | Recipient | Share | Description |
 |-----------|-------|-------------|
-| **You** (Business) | **70%** | Your wallet — your revenue |
-| Protocol Treasury | 17.5% | Sentinel development & maintenance |
-| Bounty Pool | 5% | Ethical alignment rewards |
-| Swarm Pool | 5% | Referral network incentives |
-| Hunter (Referrer) | 2.5% | The agent who referred you |
+| **You** (Business) | **60%** | Your wallet — your revenue |
+| Hunter Agent | 20% | The AI agent who onboarded you |
+| Protocol Treasury | 16% | Sentinel infrastructure & development |
+| Parent Agent | 4% | The agent who recruited your Hunter |
 
 All splits enforced on-chain. No intermediaries. No invoices. No trust required.
 
@@ -61,7 +60,7 @@ Edit `.env` and fill in:
 
 | Variable | What To Enter |
 |----------|---------------|
-| `SENTINEL_BUSINESS_WALLET` | Your Base wallet address (receives 70%) |
+| `SENTINEL_BUSINESS_WALLET` | Your Base wallet address (receives 60%) |
 | `SENTINEL_REFERRAL_ID` | On-Chain referral hash (provided by your referrer) |
 | `SENTINEL_CACHE_PASSWORD` | Any strong random password |
 | `SENTINEL_HMAC_SECRET` | Any strong random secret (`openssl rand -hex 64`) |
@@ -134,7 +133,7 @@ sentinel-client-package/
 | Detail | Value |
 |--------|-------|
 | Network | Base Mainnet (Chain ID: 8453) |
-| Contract | [`0xfDf6f1e617E4e0f4171f2c441BCE11707D3A7F84`](https://basescan.org/address/0xfDf6f1e617E4e0f4171f2c441BCE11707D3A7F84) |
+| Contract | [`0xC8F8218Cc8F858BAdf3bc1a45b5d85E50666DbdF`](https://basescan.org/address/0xC8F8218Cc8F858BAdf3bc1a45b5d85E50666DbdF) |
 | Token | USDC on Base |
 | Price | $0.02 per bot request |
 | Source | [sentinel-armory](https://github.com/sentinel-verification/sentinel-armory) |
