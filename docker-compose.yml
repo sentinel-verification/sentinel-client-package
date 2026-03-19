@@ -23,7 +23,7 @@ services:
       - sentinel-net
 
   sentinel-auth:
-    image: sentinelverification/sentinel-auth:v5
+    image: sentinelverification/sentinel-auth:v7
     container_name: sentinel-auth
     restart: unless-stopped
     env_file: .env # Reads the client's wallet details
@@ -44,7 +44,7 @@ services:
       - sentinel-net
 
   sentinel-verifier:
-    image: sentinelverification/sentinel-verifier:v5
+    image: sentinelverification/sentinel-verifier:v6
     container_name: sentinel-verifier
     restart: unless-stopped
     env_file: .env
